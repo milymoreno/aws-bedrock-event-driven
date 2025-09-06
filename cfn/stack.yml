@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Microservicio event-driven con SQS -> Lambda + IA (Amazon Bedrock) y logs
+Parameters:
+  QueueName:
+    Type: String
+    Default: eda-bedrock-queue
+  LambdaTimeout:
+    Type: Number
+    Default: 30
+Resources:
+  AppQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref QueueName
+      VisibilityTimeout: 60
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: sqs-and-bedrock-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                  - sqs:ChangeMessageVisibility
+                Resource: !GetAtt AppQueue.Arn
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource: "*"
+
+  AppFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: eda-bedrock-consumer
+      Runtime: python3.12
+      Handler: handler.lambda_handler
+      Timeout: !Ref LambdaTimeout
+      Role: !GetAtt LambdaRole.Arn
+      Environment:
+        Variables:
+          MODEL_ID: "amazon.titan-text-lite-v1"
+      Code:
+        ZipFile: |
+          import json, os, boto3
+          bedrock = boto3.client("bedrock-runtime")
+          def lambda_handler(event, context):
+              for r in event.get("Records", []):
+                  body = r.get("body","")
+                  prompt = f"Resume en una línea: {body}"
+                  model_id = os.getenv("MODEL_ID","amazon.titan-text-lite-v1")
+                  resp = bedrock.invoke_model(
+                      modelId=model_id,
+                      body=json.dumps({"inputText": prompt})
+                  )
+                  out = json.loads(resp["body"].read())
+                  print("BEDROCK_OUTPUT:", out)
+              return {"statusCode": 200, "body": "ok"}
+
+  EventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn: !GetAtt AppQueue.Arn
+      FunctionName: !Ref AppFunction
+
+Outputs:
+  QueueUrl:
+    Value: !Ref AppQueue
+  QueueArn:
+    Value: !GetAtt AppQueue.Arn
+  LambdaName:
+    Value: !Ref AppFunction
