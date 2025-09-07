@@ -5,7 +5,7 @@ variable "queue_name" {
 
 variable "lambda_name" {
   type    = string
-  default = "eda-bedrock-consumer"
+  default = "eda-bedrock-consumer-v2"
 }
 
 variable "lambda_timeout" {
