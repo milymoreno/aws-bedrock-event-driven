@@ -6,3 +6,4 @@ __pycache__/
 # Terraform
 terraform/.terraform/
 terraform/terraform.tfstate*
+!terraform/lambda.zip
