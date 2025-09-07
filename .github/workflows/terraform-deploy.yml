@@ -11,7 +11,7 @@ jobs:
       run:
         working-directory: terraform
     permissions:
-      id-token: write     # para OIDC
+      id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -28,21 +28,10 @@ jobs:
           role-to-assume: ${{ secrets.ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Check variables
+      - name: Package lambda code (ALWAYS)
         run: |
-          echo "ACCOUNT_ID: ${{ vars.ACCOUNT_ID }}"
-          echo "AWS_REGION: ${{ vars.AWS_REGION }}"
-          echo "ROLE_ARN:   ${{ vars.ROLE_ARN }}"
-
-      - name: Who am I (STS)
-        run: aws sts get-caller-identity
-
-      - name: Package lambda code (if missing)
-        run: |
-          if [ ! -f lambda.zip ] && [ -d lambda_src ]; then
-            zip -j lambda.zip lambda_src/*
-          fi
-          ls -lah
+          zip -j -r lambda.zip lambda_src/* || true
+          ls -lah lambda.zip || true
 
       - name: Terraform fmt (check)
         run: terraform fmt -check
