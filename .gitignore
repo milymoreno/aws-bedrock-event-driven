@@ -2,3 +2,7 @@ __pycache__/
 *.zip
 *.pyc
 .env
+
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate*
