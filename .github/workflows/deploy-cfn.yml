@@ -1,0 +1,27 @@
+name: Deploy CFN
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name eda-bedrock-cfn \
+            --template-file cfn/template.yaml \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameter-overrides QueueName=eda-bedrock-queue-cfn
