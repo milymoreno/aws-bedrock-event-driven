@@ -11,21 +11,51 @@ jobs:
       run:
         working-directory: terraform
     permissions:
-      id-token: write   # OIDC
+      id-token: write     # para OIDC
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.5
+
       - name: Configure AWS creds (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Check variables
+        run: |
+          echo "ACCOUNT_ID: ${{ vars.ACCOUNT_ID }}"
+          echo "AWS_REGION: ${{ vars.AWS_REGION }}"
+          echo "ROLE_ARN:   ${{ vars.ROLE_ARN }}"
+
+      - name: Who am I (STS)
+        run: aws sts get-caller-identity
+
+      - name: Package lambda code (if missing)
+        run: |
+          if [ ! -f lambda.zip ] && [ -d lambda_src ]; then
+            zip -j lambda.zip lambda_src/*
+          fi
+          ls -lah
+
+      - name: Terraform fmt (check)
+        run: terraform fmt -check
+
       - name: Terraform init
         run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate
+
       - name: Terraform plan
         run: terraform plan -input=false -out=tfplan
+
       - name: Terraform apply
+        if: github.ref == refs/heads/main
         run: terraform apply -input=false -auto-approve tfplan
