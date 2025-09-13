@@ -1,0 +1,43 @@
+@startuml Event-driven con IA + Monitoreo (AWS)
+' Activa modo oscuro si lo deseas
+!$AWS_DARK = true
+
+' Cargar íconos de AWS
+!define AWSPuml https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v20.0/dist
+!include AWSPuml/AWSCommon.puml
+
+' Componentes usados
+!include AWSPuml/ApplicationIntegration/SimpleQueueService.puml
+!include AWSPuml/ArtificialIntelligence/Bedrock.puml
+!include AWSPuml/Compute/Lambda.puml
+!include AWSPuml/ManagementGovernance/CloudWatch.puml
+
+!include AWSPuml/NetworkingContentDelivery/APIGateway.puml
+!include AWSPuml/Compute/EC2.puml
+
+
+
+left to right direction
+
+' Productores opcionales
+APIGateway(api, "Amazon API Gateway", "Frontend / App")
+EC2(svc, "Microservice", "Productor backend")
+
+' Actores y servicios
+
+SimpleQueueService(queue, "Event Queue (SQS)", "Mensajes con prompt")
+Lambda(consumer, "eda-bedrock-consumer", "Procesa y enriquece")
+Bedrock(br, "Amazon Bedrock", "Titan Text G1 Lite")
+CloudWatch(cw, "Amazon CloudWatch", "Logs & Métricas")
+
+
+' Flujo
+api --> queue : SendMessage(JSON con prompt)
+svc --> queue : SendMessage(JSON con prompt)
+queue --> consumer : Trigger SQS
+consumer --> br    : InvokeModel(prompt)
+br --> consumer    : Respuesta IA
+consumer --> cw    : Logs/Métricas
+
+@enduml
+

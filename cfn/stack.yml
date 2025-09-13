@@ -11,7 +11,7 @@ Resources:
   AppQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Ref QueueName
+      QueueName: {Ref: QueueName}
       VisibilityTimeout: 60
 
   LambdaRole:
@@ -36,7 +36,7 @@ Resources:
                   - sqs:DeleteMessage
                   - sqs:GetQueueAttributes
                   - sqs:ChangeMessageVisibility
-                Resource: !GetAtt AppQueue.Arn
+                Resource: {"Fn::GetAtt": [AppQueue, Arn]}
               - Effect: Allow
                 Action:
                   - bedrock:InvokeModel
@@ -49,8 +49,8 @@ Resources:
       FunctionName: eda-bedrock-consumer
       Runtime: python3.12
       Handler: handler.lambda_handler
-      Timeout: !Ref LambdaTimeout
-      Role: !GetAtt LambdaRole.Arn
+      Timeout: {Ref: LambdaTimeout}
+      Role: {"Fn::GetAtt": [LambdaRole, Arn]}
       Environment:
         Variables:
           MODEL_ID: "amazon.titan-text-lite-v1"
@@ -76,13 +76,13 @@ Resources:
     Properties:
       BatchSize: 1
       Enabled: true
-      EventSourceArn: !GetAtt AppQueue.Arn
-      FunctionName: !Ref AppFunction
+      EventSourceArn: {"Fn::GetAtt": [AppQueue, Arn]}
+      FunctionName: {Ref: AppFunction}
 
 Outputs:
   QueueUrl:
-    Value: !Ref AppQueue
+    Value: {Ref: AppQueue}
   QueueArn:
-    Value: !GetAtt AppQueue.Arn
+    Value: {"Fn::GetAtt": [AppQueue, Arn]}
   LambdaName:
-    Value: !Ref AppFunction
+    Value: {Ref: AppFunction}

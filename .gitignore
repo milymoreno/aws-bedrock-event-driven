@@ -2,8 +2,10 @@ __pycache__/
 *.zip
 *.pyc
 .env
+venv/
 
 # Terraform
 terraform/.terraform/
 terraform/terraform.tfstate*
 !terraform/lambda.zip
+venv/

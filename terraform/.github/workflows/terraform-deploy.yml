@@ -1,0 +1,31 @@
+name: Terraform Deploy
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+      - name: Configure AWS creds (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::340449474198:role/github-actions-oidc-terraform
+          aws-region: us-east-1
+      - name: Terraform init
+        run: terraform init -input=false
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
